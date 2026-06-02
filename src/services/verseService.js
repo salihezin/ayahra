@@ -10,15 +10,3 @@ export async function getVersesBySurah(surahId) {
   if (error) throw error
   return data
 }
-
-export async function getVerseByNumber(surahId, verseId) {
-  const { data, error } = await supabase
-    .from('verses')
-    .select('*')
-    .eq('surah_id', surahId)
-    .eq('verse_id', verseId)
-    .maybeSingle()
-
-  if (error) throw error
-  return data
-}

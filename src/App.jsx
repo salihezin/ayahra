@@ -1,240 +1,288 @@
-import { useEffect, useState } from 'react'
-import './App.css'
-import {
-  Box,
-  Paper,
-  TextField,
-  Typography,
-  Chip,
-  Drawer
-} from '@mui/material'
+import { useState } from 'react'
+import { useSurahs } from './hooks/useSurahs'
+import { useVerses } from './hooks/useVerses'
+import { useTags } from './hooks/useTags'
 
-import { getSurahs } from './services/surahService'
-import { getVersesBySurah } from './services/verseService'
-import {
-  searchTags,
-  getVerseTags,
-  getOrCreateTag,
-  attachTagToVerse as attachTag
-} from './services/tagService'
-
-const normalize = (text) =>
-  text
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, '-')
-
-function normalizeSearch(text) {
-  return text
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/ı/g, 'i')
-    .replace(/ğ/g, 'g')
-    .replace(/ü/g, 'u')
-    .replace(/ş/g, 's')
-    .replace(/ö/g, 'o')
-    .replace(/ç/g, 'c')
-    .trim()
+function SearchIcon() {
+  return (
+    <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+    </svg>
+  )
 }
 
-function App() {
-  const [tagInput, setTagInput] = useState('')
-  const [tags, setTags] = useState([])
-  const [ayahTags, setAyahTags] = useState([])
-  const [surahs, setSurahs] = useState([])
-  const [surahSearch, setSurahSearch] = useState('')
-  const [filteredSurahs, setFilteredSurahs] = useState([])
-  const [selectedSurah, setSelectedSurah] = useState(null)
-  const [verseNumber, setVerseNumber] = useState('')
-  const [surahData, setSurahData] = useState(null)
-  const [sheetOpen, setSheetOpen] = useState(false)
-  const [activeVerse, setActiveVerse] = useState(null)
-
-  useEffect(() => {
-    getSurahs().then(setSurahs)
-  }, [])
-
-  async function settingSurahData(surah) {
-    setSurahData(null)
-    const data = await getVersesBySurah(surah.id)
-    setSurahData(data)
-  }
-
-  async function openVerse(verse) {
-    setActiveVerse(verse)
-    setSheetOpen(true)
-    const data = await getVerseTags(verse.id)
-    setAyahTags(data)
-  }
-
-  async function searchTagsHandler(value) {
-    setTagInput(value)
-    if (!value.trim()) {
-      setTags([])
-      return
-    }
-    const data = await searchTags(value)
-    setTags(data)
-  }
-
-  async function attachTagToVerseHandler(tagName) {
-    if (!activeVerse) return
-    const cleanTag = normalize(tagName)
-    const tag = await getOrCreateTag(cleanTag)
-    await attachTag(activeVerse.id, tag.id)
-    setTagInput('')
-    setTags([])
-    openVerse(activeVerse)
-  }
-
-  function searchSurah(value) {
-    setSurahSearch(value)
-    if (!value.trim()) {
-      setFilteredSurahs([])
-      return
-    }
-    const search = normalizeSearch(value)
-    const result = surahs.filter((s) => {
-      const name = normalizeSearch(s.name)
-      return name.includes(search) || String(s.id).includes(search)
-    })
-    setFilteredSurahs(result.slice(0, 10))
-  }
-
-  const filteredVerses = surahData
-    ? verseNumber.trim()
-      ? surahData.filter((v) => String(v.verse_id) === verseNumber.trim())
-      : surahData
-    : []
-
+function ChevronRight() {
   return (
-    <div style={{ display: 'flex', minHeight: '100vh' }}>
-      <div style={{ flex: 2, padding: 24 }}>
-        <div style={{ marginBottom: 24 }}>
-          <input
-            value={surahSearch}
-            onChange={(e) => searchSurah(e.target.value)}
-            placeholder="Sure ara (Fatiha, Bakara, 99...)"
-            style={{ width: '100%', padding: 12, marginBottom: 12 }}
-          />
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 18l6-6-6-6" />
+    </svg>
+  )
+}
 
-          {filteredSurahs.map((surah) => (
-            <div
-              key={surah.id}
-              onClick={() => {
-                setSelectedSurah(surah)
-                setSurahSearch(`${surah.id} - ${surah.name}`)
-                setFilteredSurahs([])
-                setVerseNumber('')
-                settingSurahData(surah)
-              }}
-              style={{ padding: 8, borderBottom: '1px solid #eee', cursor: 'pointer' }}
-            >
-              {surah.id} - {surah.name}
-            </div>
-          ))}
+function ChevronLeft() {
+  return (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 18l-6-6 6-6" />
+    </svg>
+  )
+}
 
-          {selectedSurah && (
-            <>
-              <div style={{ marginTop: 16 }}>
-                Seçilen Sure:
-                <strong>
-                  {' '}
-                  {selectedSurah.id} - {selectedSurah.name} ({selectedSurah.total_verses} ayet)
-                </strong>
-              </div>
+function FilterIcon() {
+  return (
+    <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h8" />
+    </svg>
+  )
+}
 
-              <input
-                value={verseNumber}
-                onChange={(e) => setVerseNumber(e.target.value)}
-                placeholder="Ayet No (boş bırakırsan tümü gelir)"
-                style={{ width: '100%', padding: 12, marginTop: 12 }}
-              />
-            </>
-          )}
-
-          {surahData && (
-            <>
-              <h2>Sure Verileri</h2>
-              {filteredVerses.length > 0 ? (
-                filteredVerses.map((verse) => (
-                  <Paper
-                    key={verse.id}
-                    sx={{ p: 2, mb: 2, cursor: 'pointer' }}
-                    onClick={() => openVerse(verse)}
-                  >
-                    <Typography variant="body2" color="text.secondary">
-                      {verse.verse_id}
-                    </Typography>
-                    <Typography>{verse.translation}</Typography>
-                  </Paper>
-                ))
-              ) : (
-                <Typography color="text.secondary" sx={{ mt: 2 }}>
-                  Bu numarada ayet bulunamadı.
-                </Typography>
-              )}
-            </>
-          )}
+function SkeletonList({ count = 6 }) {
+  return (
+    <div className="px-4">
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} className="py-3.5 border-b border-gray-100 dark:border-white/5">
+          <div className="h-3.5 bg-gray-200 dark:bg-white/10 rounded-full w-32 mb-2 animate-pulse" />
+          <div className="h-2.5 bg-gray-100 dark:bg-white/5 rounded-full w-16 animate-pulse" />
         </div>
-      </div>
-
-      <div style={{ flex: 1, borderLeft: '1px solid #ddd', padding: 24 }} />
-
-      <Drawer anchor="bottom" open={sheetOpen} onClose={() => setSheetOpen(false)}>
-        <Box sx={{ p: 3, minHeight: '50vh' }}>
-          {activeVerse && (
-            <>
-              <Typography variant="h6">
-                {activeVerse.surah_name} {activeVerse.verse_id}
-              </Typography>
-
-              <Typography sx={{ mt: 2 }}>
-                {activeVerse.translation}
-              </Typography>
-
-              <Typography sx={{ mt: 3 }}>Etiketler</Typography>
-
-              <Box sx={{ mt: 2 }}>
-                {ayahTags.map((item, i) => (
-                  <Chip key={i} label={item.tags?.name} sx={{ mr: 1, mb: 1 }} />
-                ))}
-              </Box>
-
-              <Box sx={{ mt: 3 }}>
-                <TextField
-                  fullWidth
-                  value={tagInput}
-                  onChange={(e) => searchTagsHandler(e.target.value)}
-                  placeholder="Tag ara veya ekle"
-                />
-              </Box>
-
-              <Box sx={{ mt: 2 }}>
-                {tags.map((tag) => (
-                  <Chip
-                    key={tag.id}
-                    label={tag.name}
-                    onClick={() => attachTagToVerseHandler(tag.name)}
-                    sx={{ mr: 1, mb: 1 }}
-                  />
-                ))}
-              </Box>
-
-              {tagInput && (
-                <Chip
-                  color="primary"
-                  label={`+ Yeni oluştur: ${tagInput}`}
-                  onClick={() => attachTagToVerseHandler(tagInput)}
-                />
-              )}
-            </>
-          )}
-        </Box>
-      </Drawer>
+      ))}
     </div>
   )
 }
 
-export default App
+export default function App() {
+  const [screen, setScreen] = useState('surahs')
+  const [selectedSurah, setSelectedSurah] = useState(null)
+  const [activeVerse, setActiveVerse] = useState(null)
+  const [sheetOpen, setSheetOpen] = useState(false)
+  const [swipeStartY, setSwipeStartY] = useState(null)
+
+  const { query, setQuery, surahs, isLoading: surahsLoading } = useSurahs()
+  const { verses, isLoading: versesLoading, verseNumber, setVerseNumber } = useVerses(selectedSurah?.id)
+  const { verseTags, searchResults, popularTags, tagInput, setTagInput, attachTag, removeTag } = useTags(activeVerse?.id)
+
+  function selectSurah(surah) {
+    setSelectedSurah(surah)
+    setQuery('')
+    setScreen('verses')
+  }
+
+  function openVerse(verse) {
+    setActiveVerse(verse)
+    setSheetOpen(true)
+  }
+
+  function closeSheet() {
+    setSheetOpen(false)
+    setTagInput('')
+  }
+
+  function onSwipeStart(e) {
+    setSwipeStartY(e.touches[0].clientY)
+  }
+
+  function onSwipeEnd(e) {
+    if (swipeStartY === null) return
+    const delta = e.changedTouches[0].clientY - swipeStartY
+    if (delta > 60) closeSheet()
+    setSwipeStartY(null)
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-[#0e0e0f] flex flex-col max-w-lg mx-auto">
+
+      {/* EKRAN 1 — Sure listesi */}
+      {screen === 'surahs' && (
+        <div className="flex flex-col flex-1">
+          <div className="px-4 pt-12 pb-3">
+            <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Kuran</h1>
+          </div>
+
+          <div className="px-4 pb-3">
+            <div className="flex items-center gap-2 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-3 py-2.5">
+              <span className="text-gray-400 dark:text-white/30"><SearchIcon /></span>
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Sure ara..."
+                className="flex-1 bg-transparent text-sm text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-white/30 outline-none"
+                style={{ fontSize: '16px' }}
+              />
+            </div>
+          </div>
+
+          {surahsLoading ? (
+            <SkeletonList count={8} />
+          ) : (
+            <div className="flex-1 overflow-y-auto px-4">
+              {surahs.map((surah) => (
+                <button
+                  key={surah.id}
+                  onClick={() => selectSurah(surah)}
+                  className="w-full flex items-center justify-between py-3.5 border-b border-gray-100 dark:border-white/5 text-left active:bg-gray-100 dark:active:bg-white/5"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-medium text-white bg-gray-300 dark:bg-white/15 rounded-md w-7 h-7 flex items-center justify-center shrink-0">
+                      {surah.id}
+                    </span>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">{surah.name}</p>
+                      <p className="text-xs text-gray-400 dark:text-white/30 mt-0.5">{surah.total_verses} ayet</p>
+                    </div>
+                  </div>
+                  <span className="text-gray-300 dark:text-white/20"><ChevronRight /></span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* EKRAN 2 — Ayet listesi */}
+      {screen === 'verses' && (
+        <div className="flex flex-col flex-1">
+          <div className="px-4 pt-12 pb-3 flex items-center gap-3">
+            <button
+              onClick={() => setScreen('surahs')}
+              className="text-gray-400 dark:text-white/40 active:text-gray-600 dark:active:text-white/60"
+            >
+              <ChevronLeft />
+            </button>
+            <div>
+              <h1 className="text-xl font-semibold text-gray-900 dark:text-white">{selectedSurah?.name}</h1>
+              <p className="text-xs text-gray-400 dark:text-white/30">{selectedSurah?.total_verses} ayet</p>
+            </div>
+          </div>
+
+          <div className="px-4 pb-3">
+            <div className="flex items-center gap-2 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-3 py-2.5">
+              <span className="text-gray-400 dark:text-white/30"><FilterIcon /></span>
+              <input
+                value={verseNumber}
+                onChange={(e) => setVerseNumber(e.target.value)}
+                placeholder="Ayet no ile filtrele..."
+                className="flex-1 bg-transparent text-sm text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-white/30 outline-none"
+                style={{ fontSize: '16px' }}
+                inputMode="numeric"
+              />
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto px-4">
+            {versesLoading ? (
+              <SkeletonList count={6} />
+            ) : verses.length === 0 ? (
+              <p className="text-sm text-gray-400 dark:text-white/30 text-center mt-8">Ayet bulunamadı.</p>
+            ) : (
+              verses.map((verse) => (
+                <button
+                  key={verse.id}
+                  onClick={() => openVerse(verse)}
+                  className="w-full text-left py-3.5 border-b border-gray-100 dark:border-white/5 active:bg-gray-100 dark:active:bg-white/5"
+                >
+                  <p className="text-xs font-medium text-gray-400 dark:text-white/30 mb-1">Ayet {verse.verse_id}</p>
+                  <p className="text-sm text-gray-800 dark:text-white/80 leading-relaxed">{verse.translation}</p>
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* BOTTOM SHEET */}
+      {sheetOpen && (
+        <>
+          <div className="fixed inset-0 bg-black/30 dark:bg-black/60 z-40" onClick={closeSheet} />
+          <div
+            className="fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-[#1a1a1b] rounded-t-2xl max-w-lg mx-auto border-t border-gray-100 dark:border-white/10"
+            onTouchStart={onSwipeStart}
+            onTouchEnd={onSwipeEnd}
+          >
+            <div className="flex justify-center pt-3 pb-1">
+              <div className="w-9 h-1 bg-gray-200 dark:bg-white/15 rounded-full" />
+            </div>
+
+            <div className="px-4 pb-10 max-h-[70vh] overflow-y-auto">
+              <p className="text-xs text-gray-400 dark:text-white/30 mt-2">
+                {activeVerse?.surah_name} · Ayet {activeVerse?.verse_id}
+              </p>
+              <p className="text-sm text-gray-800 dark:text-white/80 leading-relaxed mt-1 mb-4">
+                {activeVerse?.translation}
+              </p>
+
+              {/* Mevcut etiketler */}
+              {verseTags.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {verseTags.map((item, i) => (
+                    <span
+                      key={i}
+                      className="flex items-center gap-1.5 text-xs bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-400 px-3 py-1 rounded-full"
+                    >
+                      {item.tags?.name}
+                      <button
+                        onClick={() => removeTag(item.tag_id)}
+                        className="text-blue-400 dark:text-blue-500 hover:text-blue-600 dark:hover:text-blue-300 leading-none"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Tag input */}
+              <div className="flex items-center gap-2 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-3 py-2.5 mb-3">
+                <span className="text-gray-400 dark:text-white/30"><SearchIcon /></span>
+                <input
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  placeholder="Etiket ara veya ekle..."
+                  className="flex-1 bg-transparent text-sm text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-white/30 outline-none"
+                  style={{ fontSize: '16px' }}
+                />
+              </div>
+
+              {/* Arama sonuçları veya popüler etiketler */}
+              {tagInput.trim() ? (
+                searchResults.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {searchResults.map((tag) => (
+                      <button
+                        key={tag.id}
+                        onClick={() => attachTag(tag.name)}
+                        className="text-xs bg-gray-100 dark:bg-white/8 text-gray-700 dark:text-white/60 px-3 py-1 rounded-full active:bg-gray-200 dark:active:bg-white/15"
+                      >
+                        {tag.name}
+                      </button>
+                    ))}
+                  </div>
+                )
+              ) : (
+                popularTags.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {popularTags.map((tag) => (
+                      <button
+                        key={tag.id}
+                        onClick={() => attachTag(tag.name)}
+                        className="text-xs bg-gray-100 dark:bg-white/8 text-gray-700 dark:text-white/60 px-3 py-1 rounded-full active:bg-gray-200 dark:active:bg-white/15"
+                      >
+                        {tag.name}
+                      </button>
+                    ))}
+                  </div>
+                )
+              )}
+              {/* Yeni etiket */}
+              {tagInput.trim() && (
+                <button
+                  onClick={() => attachTag(tagInput)}
+                  className="text-xs bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-400 px-3 py-1 rounded-full active:bg-blue-100 dark:active:bg-blue-500/25"
+                >
+                  + Yeni oluştur: {tagInput}
+                </button>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
