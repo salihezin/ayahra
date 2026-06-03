@@ -200,7 +200,7 @@ export default function App() {
               <div className="w-9 h-1 bg-gray-200 dark:bg-white/15 rounded-full" />
             </div>
 
-            <div className="px-4 pb-10 max-h-[70vh] overflow-y-auto">
+            <div className="px-4 pb-10 max-h-[85vh] overflow-y-auto">
               <p className="text-xs text-gray-400 dark:text-white/30 mt-2">
                 {activeVerse?.surah_name} · Ayet {activeVerse?.verse_id}
               </p>

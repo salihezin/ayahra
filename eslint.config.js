@@ -8,6 +8,10 @@ export default defineConfig([
   globalIgnores(['dist']),
   {
     files: ['**/*.{js,jsx}'],
+    rules: {
+      'no-console': 'warn',
+      'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+    },
     extends: [
       js.configs.recommended,
       reactHooks.configs.flat.recommended,
