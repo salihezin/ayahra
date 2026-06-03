@@ -35,6 +35,7 @@ export function useTags(verseId) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['verseTags', verseId] })
+      queryClient.refetchQueries({ queryKey: ['verseTags', verseId] })
       setTagInput('')
     },
   })

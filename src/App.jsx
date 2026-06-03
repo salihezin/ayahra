@@ -11,17 +11,17 @@ function SearchIcon() {
   )
 }
 
-function ChevronRight() {
+function ChevronRight({ className = "w-4 h-4" }) {
   return (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 18l6-6-6-6" />
     </svg>
   )
 }
 
-function ChevronLeft() {
+function ChevronLeft({ className = "w-5 h-5" }) {
   return (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 18l-6-6 6-6" />
     </svg>
   )
@@ -54,6 +54,7 @@ export default function App() {
   const [activeVerse, setActiveVerse] = useState(null)
   const [sheetOpen, setSheetOpen] = useState(false)
   const [swipeStartY, setSwipeStartY] = useState(null)
+  const [activeVerseIndex, setActiveVerseIndex] = useState(null)
 
   const { query, setQuery, surahs, isLoading: surahsLoading } = useSurahs()
   const { verses, isLoading: versesLoading, verseNumber, setVerseNumber } = useVerses(selectedSurah?.id)
@@ -66,8 +67,17 @@ export default function App() {
   }
 
   function openVerse(verse) {
+    const index = verses.findIndex((v) => v.id === verse.id)
+    setActiveVerseIndex(index)
     setActiveVerse(verse)
     setSheetOpen(true)
+  }
+
+  function goToVerse(index) {
+    if (index < 0 || index >= verses.length) return
+    const verse = verses[index]
+    setActiveVerseIndex(index)
+    setActiveVerse(verse)
   }
 
   function closeSheet() {
@@ -200,6 +210,31 @@ export default function App() {
               <div className="w-9 h-1 bg-gray-200 dark:bg-white/15 rounded-full" />
             </div>
 
+            {/* Navigasyon */}
+            <div className="flex items-center justify-between px-4 py-2 border-b border-gray-100 dark:border-white/5">
+              <button
+                onPointerDown={() => goToVerse(activeVerseIndex - 1)}
+                disabled={activeVerseIndex === 0}
+                className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-white/40 disabled:opacity-20 active:text-gray-800 dark:active:text-white py-1 pr-3"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                Önceki
+              </button>
+
+              <span className="text-xs text-gray-400 dark:text-white/30">
+                {activeVerse?.verse_id} / {selectedSurah?.total_verses}
+              </span>
+
+              <button
+                onPointerDown={() => goToVerse(activeVerseIndex + 1)}
+                disabled={activeVerseIndex === verses.length - 1}
+                className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-white/40 disabled:opacity-20 active:text-gray-800 dark:active:text-white py-1 pl-3"
+              >
+                Sonraki
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+
             <div className="px-4 pb-10 max-h-[85vh] overflow-y-auto">
               <p className="text-xs text-gray-400 dark:text-white/30 mt-2">
                 {activeVerse?.surah_name} · Ayet {activeVerse?.verse_id}
@@ -247,7 +282,7 @@ export default function App() {
                     {searchResults.map((tag) => (
                       <button
                         key={tag.id}
-                        onClick={() => attachTag(tag.name)}
+                        onPointerDown={() => attachTag(tag.name)}
                         className="text-xs bg-gray-100 dark:bg-white/8 text-gray-700 dark:text-white/60 px-3 py-1 rounded-full active:bg-gray-200 dark:active:bg-white/15"
                       >
                         {tag.name}
@@ -261,7 +296,7 @@ export default function App() {
                     {popularTags.map((tag) => (
                       <button
                         key={tag.id}
-                        onClick={() => attachTag(tag.name)}
+                        onPointerDown={() => attachTag(tag.name)}
                         className="text-xs bg-gray-100 dark:bg-white/8 text-gray-700 dark:text-white/60 px-3 py-1 rounded-full active:bg-gray-200 dark:active:bg-white/15"
                       >
                         {tag.name}
@@ -273,7 +308,7 @@ export default function App() {
               {/* Yeni etiket */}
               {tagInput.trim() && (
                 <button
-                  onClick={() => attachTag(tagInput)}
+                  onPointerDown={() => attachTag(tagInput)}
                   className="text-xs bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-400 px-3 py-1 rounded-full active:bg-blue-100 dark:active:bg-blue-500/25"
                 >
                   + Yeni oluştur: {tagInput}
